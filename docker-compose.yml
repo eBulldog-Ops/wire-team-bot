@@ -1,0 +1,32 @@
+services:
+  bot:
+    build: .
+    container_name: wire-team-bot
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://wirebot:wirebot@db:5432/wire_team_bot
+    depends_on:
+      - db
+    restart: unless-stopped
+    # For Phase 0.5 we only need logs; no ports exposed.
+    # If you want to debug interactively, you can add:
+    # tty: true
+    # stdin_open: true
+
+  db:
+    image: postgres:16-alpine
+    container_name: wire-team-bot-db
+    environment:
+      POSTGRES_DB: wire_team_bot
+      POSTGRES_USER: wirebot
+      POSTGRES_PASSWORD: wirebot
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    restart: unless-stopped
+
+volumes:
+  db-data:
+

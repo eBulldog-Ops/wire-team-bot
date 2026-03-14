@@ -1,0 +1,73 @@
+import type { QualifiedId } from "../../../domain/ids/QualifiedId";
+import type { Decision, DecisionContextItem } from "../../../domain/entities/Decision";
+import type { DecisionRepository } from "../../../domain/repositories/DecisionRepository";
+import type { WireOutboundPort } from "../../ports/WireOutboundPort";
+import type { BufferedMessage } from "../../services/ConversationMessageBuffer";
+
+export interface LogDecisionInput {
+  conversationId: QualifiedId;
+  authorId: QualifiedId;
+  authorName: string;
+  rawMessageId: string;
+  rawMessage: string;
+  summary: string;
+  contextMessages: BufferedMessage[];
+  participantIds: QualifiedId[];
+}
+
+export class LogDecision {
+  constructor(
+    private readonly decisions: DecisionRepository,
+    private readonly wireOutbound: WireOutboundPort,
+  ) {}
+
+  async execute(input: LogDecisionInput): Promise<Decision> {
+    const now = new Date();
+    const id = await this.decisions.nextId();
+
+    const context: DecisionContextItem[] = input.contextMessages.map((m) => ({
+      userId: m.senderId,
+      userName: m.senderName,
+      messageText: m.text,
+      messageId: m.messageId,
+      timestamp: m.timestamp,
+    }));
+
+    const decision: Decision = {
+      id,
+      summary: input.summary,
+      rawMessage: input.rawMessage,
+      rawMessageId: input.rawMessageId,
+      context,
+      authorId: input.authorId,
+      authorName: input.authorName,
+      participants: input.participantIds,
+      conversationId: input.conversationId,
+      status: "active",
+      linkedIds: [],
+      attachments: [],
+      tags: [],
+      timestamp: now,
+      updatedAt: now,
+      deleted: false,
+      version: 1,
+    };
+
+    const saved = await this.decisions.create(decision);
+
+    await this.wireOutbound.sendPlainText(
+      input.conversationId,
+      `Logged ${saved.id}: ${saved.summary}`,
+      { replyToMessageId: input.rawMessageId },
+    );
+
+    await this.wireOutbound.sendCompositePrompt(
+      input.conversationId,
+      "Any actions from this?",
+      [{ id: "yes", label: "Yes" }, { id: "no", label: "No" }],
+      { replyToMessageId: input.rawMessageId },
+    );
+
+    return saved;
+  }
+}

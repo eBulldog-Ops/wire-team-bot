@@ -1,0 +1,27 @@
+# Node / TypeScript build artifacts
+node_modules/
+dist/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment / secrets
+.env
+.env.local
+
+# Wire SDK local dependency artifacts
+wire-apps-js-sdk/node_modules/
+wire-apps-js-sdk/build/
+wire-apps-js-sdk/sample/build/
+wire-apps-js-sdk/sample/storage/
+
+# Local SQLite storage used by the SDK
+storage/
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+

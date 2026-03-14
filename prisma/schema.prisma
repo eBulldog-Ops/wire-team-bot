@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Task {
+  id              String   @id
+  conversationId  String
+  conversationDom String
+  authorId        String
+  authorDom       String
+  authorName      String
+  rawMessageId    String
+  rawMessage      String
+  timestamp       DateTime
+  updatedAt       DateTime
+  tags            String[]
+  status          String
+  deleted         Boolean  @default(false)
+  version         Int      @default(1)
+
+  description     String
+  assigneeId      String
+  assigneeDom     String
+  assigneeName    String
+  creatorId       String
+  creatorDom      String
+  deadline        DateTime?
+  priority        String
+  recurrence      String?
+  linkedIds       String[]
+  completionNote  String?
+}
+
+model Reminder {
+  id              String   @id
+  conversationId  String?
+  conversationDom String?
+  authorId        String
+  authorDom       String
+  authorName      String
+  rawMessageId    String
+  rawMessage      String
+  timestamp       DateTime
+  updatedAt       DateTime
+  tags            String[]
+  status          String
+  deleted         Boolean  @default(false)
+  version         Int      @default(1)
+
+  description     String
+  targetId        String
+  targetDom       String
+  triggerAt       DateTime
+  recurrence      String?
+  linkedIds       String[]
+}
+
+model Decision {
+  id              String   @id
+  conversationId  String
+  conversationDom String
+  authorId        String
+  authorDom       String
+  authorName      String
+  rawMessageId    String
+  rawMessage      String
+  summary         String
+  context         Json     // DecisionContextItem[]
+  participants    Json     // QualifiedId[] serialized
+  status          String
+  supersededBy    String?
+  supersedes      String?
+  linkedIds       String[]
+  attachments     Json     // DecisionAttachment[]
+  tags            String[]
+  timestamp       DateTime
+  updatedAt       DateTime
+  deleted         Boolean  @default(false)
+  version         Int      @default(1)
+}
+
+model Action {
+  id              String    @id
+  conversationId  String
+  conversationDom String
+  creatorId       String
+  creatorDom      String
+  authorName      String
+  assigneeId      String
+  assigneeDom     String
+  assigneeName    String
+  rawMessageId    String
+  rawMessage      String
+  description     String
+  deadline        DateTime?
+  status          String
+  linkedIds       String[]
+  reminderAt      Json      // Date[] as ISO strings
+  completionNote  String?
+  tags            String[]
+  timestamp       DateTime
+  updatedAt       DateTime
+  deleted         Boolean   @default(false)
+  version         Int       @default(1)
+}
+
+model KnowledgeEntry {
+  id               String   @id
+  conversationId   String
+  conversationDom String
+  authorId         String
+  authorDom       String
+  authorName      String
+  rawMessageId    String
+  rawMessage      String
+  summary         String
+  detail          String
+  category        String
+  confidence      String
+  relatedIds      String[]
+  ttlDays         Int?
+  verifiedBy      Json     // KnowledgeVerifiedBy[]
+  retrievalCount  Int      @default(0)
+  lastRetrieved   DateTime?
+  tags            String[]
+  timestamp       DateTime
+  updatedAt       DateTime
+  deleted         Boolean  @default(false)
+  version         Int      @default(1)
+}
+
+model ConversationConfig {
+  conversationId   String
+  conversationDom  String
+  timezone         String   @default("UTC")
+  locale           String   @default("en")
+  raw              Json?
+  updatedAt        DateTime @updatedAt
+
+  @@id([conversationId, conversationDom])
+}
+
+model AuditLog {
+  id              String   @id @default(cuid())
+  timestamp       DateTime
+  actorId         String
+  actorDom        String
+  conversationId  String?
+  conversationDom String?
+  action          String
+  entityType      String?
+  entityId        String?
+  details         Json?
+}
+

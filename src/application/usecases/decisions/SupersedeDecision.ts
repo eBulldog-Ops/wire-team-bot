@@ -1,0 +1,72 @@
+import type { Decision } from "../../../domain/entities/Decision";
+import type { DecisionRepository } from "../../../domain/repositories/DecisionRepository";
+import type { WireOutboundPort } from "../../ports/WireOutboundPort";
+import type { QualifiedId } from "../../../domain/ids/QualifiedId";
+
+export interface SupersedeDecisionInput {
+  newSummary: string;
+  supersedesDecisionId: string;
+  conversationId: QualifiedId;
+  authorId: QualifiedId;
+  rawMessageId: string;
+  rawMessage: string;
+  replyToMessageId?: string;
+}
+
+export class SupersedeDecision {
+  constructor(
+    private readonly decisions: DecisionRepository,
+    private readonly wireOutbound: WireOutboundPort,
+  ) {}
+
+  async execute(input: SupersedeDecisionInput): Promise<Decision | null> {
+    const oldDecision = await this.decisions.findById(input.supersedesDecisionId);
+    if (!oldDecision || oldDecision.conversationId.id !== input.conversationId.id) {
+      return null;
+    }
+
+    const now = new Date();
+    const newId = await this.decisions.nextId();
+
+    const newDecision: Decision = {
+      id: newId,
+      summary: input.newSummary,
+      rawMessage: input.rawMessage,
+      rawMessageId: input.rawMessageId,
+      context: [],
+      authorId: input.authorId,
+      authorName: "",
+      participants: [],
+      conversationId: input.conversationId,
+      status: "active",
+      supersededBy: null,
+      supersedes: input.supersedesDecisionId,
+      linkedIds: oldDecision.linkedIds,
+      attachments: [],
+      tags: [],
+      timestamp: now,
+      updatedAt: now,
+      deleted: false,
+      version: 1,
+    };
+
+    await this.decisions.create(newDecision);
+
+    const updatedOld: Decision = {
+      ...oldDecision,
+      status: "superseded",
+      supersededBy: newId,
+      updatedAt: now,
+      version: oldDecision.version + 1,
+    };
+    await this.decisions.update(updatedOld);
+
+    await this.wireOutbound.sendPlainText(
+      input.conversationId,
+      `Logged ${newId} (supersedes ${input.supersedesDecisionId}): ${input.newSummary}`,
+      { replyToMessageId: input.replyToMessageId },
+    );
+
+    return newDecision;
+  }
+}
